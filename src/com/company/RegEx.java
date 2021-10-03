@@ -8,12 +8,12 @@ import java.lang.Exception;
 public class RegEx {
     //MACROS
     static final int CONCAT = 0xC04CA7;
-    static final int ETOILE = 0xE7011E;
-    static final int ALTERN = 0xA17E54;
+    static final int STAR = 0xE7011E;
+    static final int ALTERNATION = 0xA17E54;
     static final int PROTECTION = 0xBADDAD;
 
-    static final int PARENTHESEOUVRANT = 0x16641664;
-    static final int PARENTHESEFERMANT = 0x51515151;
+    static final int OPENING_PARENTHESIS = 0x16641664;
+    static final int CLOSING_PARENTHESIS = 0x51515151;
     static final int DOT = 0xD07;
 
     //REGEX
@@ -75,18 +75,18 @@ public class RegEx {
 
     private static int charToRoot(char c) {
         if (c == '.') return DOT;
-        if (c == '*') return ETOILE;
-        if (c == '|') return ALTERN;
-        if (c == '(') return PARENTHESEOUVRANT;
-        if (c == ')') return PARENTHESEFERMANT;
+        if (c == '*') return STAR;
+        if (c == '|') return ALTERNATION;
+        if (c == '(') return OPENING_PARENTHESIS;
+        if (c == ')') return CLOSING_PARENTHESIS;
         return (int) c;
     }
 
     private static RegExTree parse(ArrayList<RegExTree> result) throws Exception {
         while (containParenthese(result)) result = processParenthese(result);
-        while (containEtoile(result)) result = processEtoile(result);
+        while (containStar(result)) result = processStar(result);
         while (containConcat(result)) result = processConcat(result);
-        while (containAltern(result)) result = processAltern(result);
+        while (containAlternation(result)) result = processAlternation(result);
 
         if (result.size() > 1) throw new Exception();
 
@@ -94,7 +94,7 @@ public class RegEx {
     }
 
     private static boolean containParenthese(ArrayList<RegExTree> trees) {
-        for (RegExTree t : trees) if (t.root == PARENTHESEFERMANT || t.root == PARENTHESEOUVRANT) return true;
+        for (RegExTree t : trees) if (t.root == CLOSING_PARENTHESIS || t.root == OPENING_PARENTHESIS) return true;
         return false;
     }
 
@@ -102,11 +102,11 @@ public class RegEx {
         ArrayList<RegExTree> result = new ArrayList<RegExTree>();
         boolean found = false;
         for (RegExTree t : trees) {
-            if (!found && t.root == PARENTHESEFERMANT) {
+            if (!found && t.root == CLOSING_PARENTHESIS) {
                 boolean done = false;
                 ArrayList<RegExTree> content = new ArrayList<RegExTree>();
                 while (!done && !result.isEmpty())
-                    if (result.get(result.size() - 1).root == PARENTHESEOUVRANT) {
+                    if (result.get(result.size() - 1).root == OPENING_PARENTHESIS) {
                         done = true;
                         result.remove(result.size() - 1);
                     } else content.add(0, result.remove(result.size() - 1));
@@ -123,22 +123,22 @@ public class RegEx {
         return result;
     }
 
-    private static boolean containEtoile(ArrayList<RegExTree> trees) {
-        for (RegExTree t : trees) if (t.root == ETOILE && t.subTrees.isEmpty()) return true;
+    private static boolean containStar(ArrayList<RegExTree> trees) {
+        for (RegExTree t : trees) if (t.root == STAR && t.subTrees.isEmpty()) return true;
         return false;
     }
 
-    private static ArrayList<RegExTree> processEtoile(ArrayList<RegExTree> trees) throws Exception {
+    private static ArrayList<RegExTree> processStar(ArrayList<RegExTree> trees) throws Exception {
         ArrayList<RegExTree> result = new ArrayList<RegExTree>();
         boolean found = false;
         for (RegExTree t : trees) {
-            if (!found && t.root == ETOILE && t.subTrees.isEmpty()) {
+            if (!found && t.root == STAR && t.subTrees.isEmpty()) {
                 if (result.isEmpty()) throw new Exception();
                 found = true;
                 RegExTree last = result.remove(result.size() - 1);
                 ArrayList<RegExTree> subTrees = new ArrayList<RegExTree>();
                 subTrees.add(last);
-                result.add(new RegExTree(ETOILE, subTrees));
+                result.add(new RegExTree(STAR, subTrees));
             } else {
                 result.add(t);
             }
@@ -149,11 +149,11 @@ public class RegEx {
     private static boolean containConcat(ArrayList<RegExTree> trees) {
         boolean firstFound = false;
         for (RegExTree t : trees) {
-            if (!firstFound && t.root != ALTERN) {
+            if (!firstFound && t.root != ALTERNATION) {
                 firstFound = true;
                 continue;
             }
-            if (firstFound) if (t.root != ALTERN) return true;
+            if (firstFound) if (t.root != ALTERNATION) return true;
             else firstFound = false;
         }
         return false;
@@ -164,17 +164,17 @@ public class RegEx {
         boolean found = false;
         boolean firstFound = false;
         for (RegExTree t : trees) {
-            if (!found && !firstFound && t.root != ALTERN) {
+            if (!found && !firstFound && t.root != ALTERNATION) {
                 firstFound = true;
                 result.add(t);
                 continue;
             }
-            if (!found && firstFound && t.root == ALTERN) {
+            if (!found && firstFound && t.root == ALTERNATION) {
                 firstFound = false;
                 result.add(t);
                 continue;
             }
-            if (!found && firstFound && t.root != ALTERN) {
+            if (!found && firstFound && t.root != ALTERNATION) {
                 found = true;
                 RegExTree last = result.remove(result.size() - 1);
                 ArrayList<RegExTree> subTrees = new ArrayList<RegExTree>();
@@ -188,30 +188,30 @@ public class RegEx {
         return result;
     }
 
-    private static boolean containAltern(ArrayList<RegExTree> trees) {
-        for (RegExTree t : trees) if (t.root == ALTERN && t.subTrees.isEmpty()) return true;
+    private static boolean containAlternation(ArrayList<RegExTree> trees) {
+        for (RegExTree t : trees) if (t.root == ALTERNATION && t.subTrees.isEmpty()) return true;
         return false;
     }
 
-    private static ArrayList<RegExTree> processAltern(ArrayList<RegExTree> trees) throws Exception {
+    private static ArrayList<RegExTree> processAlternation(ArrayList<RegExTree> trees) throws Exception {
         ArrayList<RegExTree> result = new ArrayList<RegExTree>();
         boolean found = false;
-        RegExTree gauche = null;
+        RegExTree left = null;
         boolean done = false;
         for (RegExTree t : trees) {
-            if (!found && t.root == ALTERN && t.subTrees.isEmpty()) {
+            if (!found && t.root == ALTERNATION && t.subTrees.isEmpty()) {
                 if (result.isEmpty()) throw new Exception();
                 found = true;
-                gauche = result.remove(result.size() - 1);
+                left = result.remove(result.size() - 1);
                 continue;
             }
             if (found && !done) {
-                if (gauche == null) throw new Exception();
+                if (left == null) throw new Exception();
                 done = true;
                 ArrayList<RegExTree> subTrees = new ArrayList<RegExTree>();
-                subTrees.add(gauche);
+                subTrees.add(left);
                 subTrees.add(t);
-                result.add(new RegExTree(ALTERN, subTrees));
+                result.add(new RegExTree(ALTERNATION, subTrees));
             } else {
                 result.add(t);
             }
@@ -237,15 +237,15 @@ public class RegEx {
         RegExTree c = new RegExTree((int) 'c', new ArrayList<RegExTree>());
         ArrayList<RegExTree> subTrees = new ArrayList<RegExTree>();
         subTrees.add(c);
-        RegExTree cEtoile = new RegExTree(ETOILE, subTrees);
+        RegExTree cStar = new RegExTree(STAR, subTrees);
         subTrees = new ArrayList<RegExTree>();
         subTrees.add(b);
-        subTrees.add(cEtoile);
-        RegExTree dotBCEtoile = new RegExTree(CONCAT, subTrees);
+        subTrees.add(cStar);
+        RegExTree dotBCStar = new RegExTree(CONCAT, subTrees);
         subTrees = new ArrayList<RegExTree>();
         subTrees.add(a);
-        subTrees.add(dotBCEtoile);
-        return new RegExTree(ALTERN, subTrees);
+        subTrees.add(dotBCStar);
+        return new RegExTree(ALTERNATION, subTrees);
     }
 
     private static NDFAutomaton step2_AhoUllman(RegExTree ret) {
@@ -268,12 +268,12 @@ public class RegEx {
 
         if (ret.root == CONCAT) {
             //IMPLICIT REPRESENTATION HERE: INIT STATE IS ALWAYS 0; FINAL STATE IS ALWAYS transitionTable.length-1
-            NDFAutomaton gauche = step2_AhoUllman(ret.subTrees.get(0));
-            int[][] tTab_g = gauche.transitionTable;
-            ArrayList<Integer>[] eTab_g = gauche.epsilonTransitionTable;
-            NDFAutomaton droite = step2_AhoUllman(ret.subTrees.get(1));
-            int[][] tTab_d = droite.transitionTable;
-            ArrayList<Integer>[] eTab_d = droite.epsilonTransitionTable;
+            NDFAutomaton left = step2_AhoUllman(ret.subTrees.get(0));
+            int[][] tTab_g = left.transitionTable;
+            ArrayList<Integer>[] eTab_g = left.epsilonTransitionTable;
+            NDFAutomaton right = step2_AhoUllman(ret.subTrees.get(1));
+            int[][] tTab_d = right.transitionTable;
+            ArrayList<Integer>[] eTab_d = right.epsilonTransitionTable;
             int lg = tTab_g.length;
             int ld = tTab_d.length;
             int[][] tTab = new int[lg + ld][256];
@@ -297,14 +297,14 @@ public class RegEx {
             return new NDFAutomaton(tTab, eTab);
         }
 
-        if (ret.root == ALTERN) {
+        if (ret.root == ALTERNATION) {
             //IMPLICIT REPRESENTATION HERE: INIT STATE IS ALWAYS 0; FINAL STATE IS ALWAYS transitionTable.length-1
-            NDFAutomaton gauche = step2_AhoUllman(ret.subTrees.get(0));
-            int[][] tTab_g = gauche.transitionTable;
-            ArrayList<Integer>[] eTab_g = gauche.epsilonTransitionTable;
-            NDFAutomaton droite = step2_AhoUllman(ret.subTrees.get(1));
-            int[][] tTab_d = droite.transitionTable;
-            ArrayList<Integer>[] eTab_d = droite.epsilonTransitionTable;
+            NDFAutomaton left = step2_AhoUllman(ret.subTrees.get(0));
+            int[][] tTab_g = left.transitionTable;
+            ArrayList<Integer>[] eTab_g = left.epsilonTransitionTable;
+            NDFAutomaton right = step2_AhoUllman(ret.subTrees.get(1));
+            int[][] tTab_d = right.transitionTable;
+            ArrayList<Integer>[] eTab_d = right.epsilonTransitionTable;
             int lg = tTab_g.length;
             int ld = tTab_d.length;
             int[][] tTab = new int[2 + lg + ld][256];
@@ -333,7 +333,7 @@ public class RegEx {
             return new NDFAutomaton(tTab, eTab);
         }
 
-        if (ret.root == ETOILE) {
+        if (ret.root == STAR) {
             //IMPLICIT REPRESENTATION HERE: INIT STATE IS ALWAYS 0; FINAL STATE IS ALWAYS transitionTable.length-1
             NDFAutomaton fils = step2_AhoUllman(ret.subTrees.get(0));
             int[][] tTab_fils = fils.transitionTable;
@@ -384,8 +384,8 @@ class RegExTree {
 
     private String rootToString() {
         if (root == RegEx.CONCAT) return ".";
-        if (root == RegEx.ETOILE) return "*";
-        if (root == RegEx.ALTERN) return "|";
+        if (root == RegEx.STAR) return "*";
+        if (root == RegEx.ALTERNATION) return "|";
         if (root == RegEx.DOT) return ".";
         return Character.toString((char) root);
     }
