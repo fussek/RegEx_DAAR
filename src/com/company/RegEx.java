@@ -1,11 +1,10 @@
 package com.company;
-import java.io.File;
+import java.io.BufferedReader;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.Scanner;
 import java.util.ArrayList;
-import java.util.Scanner;
-import java.util.ArrayList;
-import java.util.Arrays;
 
 import java.lang.Exception;
 
@@ -28,7 +27,7 @@ public class RegEx {
     }
 
     // MAIN
-    public static void main(String arg[]) {
+    public static void main(String arg[]) throws FileNotFoundException {
         if (arg.length != 0) {
             regEx = arg[0];
         } else {
@@ -64,10 +63,51 @@ public class RegEx {
             NDFAutomaton mini_dfa = minifyDFA(ndfa);
             System.out.println(
                     "  >> Minified DFA:\n\nBEGIN DFA\n" +  mini_dfa.toString() + "END DFA.\n");
+
+            System.out.println("  >>>>>>> RegEx search results: <<<<<<<< \n");
+            searchForOccurrences(mini_dfa);
         }
 
-        System.out.println("  >> ...");
+        System.out.println("\n  >>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<");
         System.out.println("  >> Parsing completed.");
+    }
+
+    private static void searchForOccurrences(NDFAutomaton mini_dfa) {
+        try (BufferedReader br = new BufferedReader(new FileReader("src/56667-0.txt"))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                feedTheAutomata(line, mini_dfa);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void feedTheAutomata(String line, NDFAutomaton mini_dfa) {
+        int current_state = 0;
+        for (int i = 0; i < line.length()-1; i++){
+            char c = line.charAt(i+1);
+            int[] next_transition = mini_dfa.transitionTable[current_state];
+            int numericChar = (int) c;
+            if (!(numericChar > 256)){
+            int next_state = next_transition[numericChar];
+                if (next_state != -1){
+                    current_state = next_state;
+                }
+///////////////////CONCAT HANDLING?
+//                else if((next_transition[43] != -1) && true) {
+//                    continue;
+//                }
+                else {
+                    current_state = 0;
+                    continue;
+                }
+                if (mini_dfa.finalStates.contains(current_state)){
+                    System.out.println(line);
+                    break;
+                }
+            }
+        }
     }
 
     // FROM REGEX TO SYNTAX TREE
