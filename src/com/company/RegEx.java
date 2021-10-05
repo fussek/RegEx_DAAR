@@ -76,29 +76,27 @@ public class RegEx {
         try (BufferedReader br = new BufferedReader(new FileReader("src/56667-0.txt"))) {
             String line;
             while ((line = br.readLine()) != null) {
-                feedTheAutomata(line, mini_dfa);
+                findRegExInLine(line, mini_dfa);
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private static void feedTheAutomata(String line, NDFAutomaton mini_dfa) {
+    private static void findRegExInLine(String line, NDFAutomaton mini_dfa) {
         int current_state = 0;
-        for (int i = 0; i < line.length()-1; i++){
-            char c = line.charAt(i+1);
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
             int[] next_transition = mini_dfa.transitionTable[current_state];
-            int numericChar = (int) c;
-            if (!(numericChar > 256)){
-            int next_state = next_transition[numericChar];
-                if (next_state != -1){
+            if ((int) c <= 256) {
+                int next_state = next_transition[(int) c];
+                if (next_state != -1) {
                     current_state = next_state;
-                }
-                else {
+                } else {
                     current_state = 0;
                     continue;
                 }
-                if (mini_dfa.finalStates.contains(current_state)){
+                if (mini_dfa.finalStates.contains(current_state)) {
                     System.out.println(line);
                     break;
                 }
