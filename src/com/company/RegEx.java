@@ -94,10 +94,6 @@ public class RegEx {
                 if (next_state != -1){
                     current_state = next_state;
                 }
-///////////////////CONCAT HANDLING?
-//                else if((next_transition[43] != -1) && true) {
-//                    continue;
-//                }
                 else {
                     current_state = 0;
                     continue;
