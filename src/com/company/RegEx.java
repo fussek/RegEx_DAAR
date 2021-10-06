@@ -36,6 +36,7 @@ public class RegEx {
             regEx = scanner.next();
             scanner.close();
         }
+        long start2 = System.currentTimeMillis();
         System.out.println("  >> Parsing regEx \"" + regEx + "\".");
         System.out.println("  >> ...");
 
@@ -66,6 +67,9 @@ public class RegEx {
 
             System.out.println("  >>>>>>> RegEx search results: <<<<<<<< \n");
             searchForOccurrences(mini_dfa);
+            long end2 = System.currentTimeMillis();
+            System.out.println("\n\n ++++++++ Elapsed Time in milli seconds: "+ (end2-start2) +"ms ++++++++");
+
         }
 
         System.out.println("\n  >>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<");
