@@ -12,6 +12,7 @@ public class RegEx {
     // MACROS
     static final int CONCAT = 0xC04CA7;
     static final int STAR = 0xE7011E;
+    static final int PLUS = 0xE7011F;
     static final int ALTERNATION = 0xA17E54;
     static final int PROTECTION = 0xBADDAD;
 
@@ -110,14 +111,6 @@ public class RegEx {
 
     // FROM REGEX TO SYNTAX TREE
     private static RegExTree parse() throws Exception {
-        // BEGIN DEBUG: set conditional to true for debug example
-        if (false)
-            throw new Exception();
-        RegExTree example = exampleAhoUllman();
-        if (false)
-            return example;
-        // END DEBUG
-
         ArrayList<RegExTree> result = new ArrayList<RegExTree>();
         for (int i = 0; i < regEx.length(); i++)
             result.add(new RegExTree(charToRoot(regEx.charAt(i)), new ArrayList<RegExTree>()));
@@ -130,6 +123,8 @@ public class RegEx {
             return DOT;
         if (c == '*')
             return STAR;
+        if (c == '+')
+            return PLUS;
         if (c == '|')
             return ALTERNATION;
         if (c == '(')
@@ -142,6 +137,8 @@ public class RegEx {
     private static RegExTree parse(ArrayList<RegExTree> result) throws Exception {
         while (containParenthese(result))
             result = processParenthese(result);
+        while (containPlus(result))
+            result = processPlus(result);
         while (containStar(result))
             result = processStar(result);
         while (containConcat(result))
@@ -187,6 +184,32 @@ public class RegEx {
         }
         if (!found)
             throw new Exception();
+        return result;
+    }
+
+    private static boolean containPlus(ArrayList<RegExTree> trees) {
+        for (RegExTree t : trees)
+            if (t.root == PLUS && t.subTrees.isEmpty())
+                return true;
+        return false;
+    }
+
+    private static ArrayList<RegExTree> processPlus(ArrayList<RegExTree> trees) throws Exception {
+        ArrayList<RegExTree> result = new ArrayList<RegExTree>();
+        boolean found = false;
+        for (RegExTree t : trees) {
+            if (!found && t.root == PLUS && t.subTrees.isEmpty()) {
+                if (result.isEmpty())
+                    throw new Exception();
+                found = true;
+                RegExTree last = result.get(result.size() - 1);
+                ArrayList<RegExTree> subTrees = new ArrayList<RegExTree>();
+                subTrees.add(last);
+                result.add(new RegExTree(STAR, subTrees));
+            } else {
+                result.add(t);
+            }
+        }
         return result;
     }
 
@@ -571,6 +594,8 @@ class RegExTree {
             return ".";
         if (root == RegEx.STAR)
             return "*";
+        if (root == RegEx.PLUS)
+            return "+";
         if (root == RegEx.ALTERNATION)
             return "|";
         if (root == RegEx.DOT)
