@@ -5,8 +5,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.Scanner;
 
-import jdk.nashorn.internal.codegen.MapCreator;
-
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.HashMap;
@@ -65,21 +63,12 @@ public class RegEx {
                 System.err.println("  >> ERROR: syntax error for regEx \"" + regEx + "\".");
             }
             NDFAutomaton ndfa = regexToAutomaton(ret);
-            System.out.println("  >> NDFA construction:\n\nBEGIN NDFA\n" + ndfa.toString() + "END NDFA.\n");
-
             DFAutomaton dfa = convertToDFA(ndfa);
-            System.out.println(
-                    "  >> DFA conversion:\n\nBEGIN DFA\n" + dfa.toString() + "END DFA.\n");
-
             DFAutomaton mini_dfa = minifyDFA(dfa);
-            System.out.println(
-                    "  >> Minified DFA:\n\nBEGIN DFA\n" +  mini_dfa.toString() + "END DFA.\n");
-
             System.out.println("  >>>>>>> RegEx search results: <<<<<<<< \n");
             searchForOccurrences(mini_dfa);
             long end2 = System.currentTimeMillis();
             System.out.println("\n\n ++++++++ Elapsed Time in milli seconds: "+ (end2-start2) +"ms ++++++++");
-
         }
 
         System.out.println("\n  >>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<");
@@ -87,7 +76,7 @@ public class RegEx {
     }
 
     private static void searchForOccurrences(DFAutomaton mini_dfa) {
-        try (BufferedReader br = new BufferedReader(new FileReader("src/56667-0.txt"))) {
+        try (BufferedReader br = new BufferedReader(new FileReader("56667-0.txt"))) {
             String line;
             while ((line = br.readLine()) != null) {
                 findRegExInLine(line, mini_dfa);
@@ -521,7 +510,7 @@ public class RegEx {
                 for (int col = 0; col < 256; col++)
                     transitionTable_without_eps[i][col].clear();
         }
-        // Convert to DFA
+        // Convert to DFA - subset construction
         int[][] dfa_transitionTable = new int[transitionTable_without_eps.length][256];
         for (int i = 0; i < dfa_transitionTable.length; i++) {
             for (int col = 0; col < 256; col++)
@@ -569,21 +558,20 @@ public class RegEx {
     }
 
     private static DFAutomaton minifyDFA(DFAutomaton dfa) {
-                /*
         // Remove reduntant states
         ArrayList<Integer>[] transitions_as_arraylist = new ArrayList[dfa.transitionTable.length];
         for (int i = 0; i < dfa.transitionTable.length; i++) {
             transitions_as_arraylist[i] = new ArrayList<Integer>();
-            for (int col = 0; col < 256; col++) {
-                //transitions_as_arraylist[i].addAll(dfa.transitionTable[i][col]);
-            }
+            for (int col = 0; col < 256; col++)
+                if (dfa.transitionTable[i][col] != -1)
+                    transitions_as_arraylist[i].add(dfa.transitionTable[i][col]);
         }
         ArrayList<Integer> reachable_from_inital = getTransitiveClosure(0, transitions_as_arraylist,
                 new ArrayList<Integer>());
         for (int i = 1; i < dfa.transitionTable.length; i++) {
             if (!reachable_from_inital.contains(i)) {
                 for (int col = 0; col < 256; col++)
-                    //dfa.transitionTable[i][col].clear();
+                    dfa.transitionTable[i][col] = -1;
             }
         }
         ArrayList<Integer> new_final_states = new ArrayList<Integer>();
@@ -592,15 +580,15 @@ public class RegEx {
                 new_final_states.add(state);
         }
         dfa.finalStates = new_final_states;
-        System.out.println(dfa.toString());
-        // Convert to DFA
-        
-        for (int i = 1; i < nfa.transitionTable.length; i++) {
+        /*
+        ArrayList<Integer> accepting = new ArrayList<Integer>(dfa.finalStates);
+        ArrayList<Integer> non_accepting = new ArrayList<Integer>();
+        for (int state : )
 
-            
+        for (int i = 0; i < dfa_transitionTable.length; i++) {
+            for (int col = 0; col < 256; col++)
+                dfa_transitionTable[i][col] = -1;
         }
-
-
         */
         return dfa;
     }
