@@ -4,16 +4,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Scanner;
-
-import jdk.nashorn.internal.codegen.MapCreator;
-
 import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.HashMap;
-import java.util.Queue;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.Collections;
 
 import java.lang.Exception;
 
@@ -21,7 +12,6 @@ public class RegEx {
     // MACROS
     static final int CONCAT = 0xC04CA7;
     static final int STAR = 0xE7011E;
-    static final int PLUS = 0xE7011F;
     static final int ALTERNATION = 0xA17E54;
     static final int PROTECTION = 0xBADDAD;
 
@@ -67,11 +57,11 @@ public class RegEx {
             NDFAutomaton ndfa = regexToAutomaton(ret);
             System.out.println("  >> NDFA construction:\n\nBEGIN NDFA\n" + ndfa.toString() + "END NDFA.\n");
 
-            DFAutomaton dfa = convertToDFA(ndfa);
+            NDFAutomaton dfa = convertToDFA(ndfa);
             System.out.println(
-                    "  >> DFA conversion:\n\nBEGIN DFA\n" + dfa.toString() + "END DFA.\n");
+                    "  >> NDFA without epsilon construction:\n\nBEGIN NDFA\n" + dfa.toString() + "END NDFA.\n");
 
-            DFAutomaton mini_dfa = minifyDFA(dfa);
+            NDFAutomaton mini_dfa = minifyDFA(ndfa);
             System.out.println(
                     "  >> Minified DFA:\n\nBEGIN DFA\n" +  mini_dfa.toString() + "END DFA.\n");
 
@@ -83,10 +73,10 @@ public class RegEx {
         }
 
         System.out.println("\n  >>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<");
-        System.out.println("  >> Parsing completed.");
+        System.out.println("  >> Parsing completed 1.");
     }
 
-    private static void searchForOccurrences(DFAutomaton mini_dfa) {
+    private static void searchForOccurrences(NDFAutomaton mini_dfa) {
         try (BufferedReader br = new BufferedReader(new FileReader("src/56667-0.txt"))) {
             String line;
             while ((line = br.readLine()) != null) {
@@ -97,12 +87,13 @@ public class RegEx {
         }
     }
 
-    private static void findRegExInLine(String line, DFAutomaton mini_dfa) {
+    private static void findRegExInLine(String line, NDFAutomaton mini_dfa) {
         int current_state = 0;
         for (int i = 0; i < line.length(); i++) {
             char c = line.charAt(i);
+            int[] next_transition = mini_dfa.transitionTable[current_state];
             if ((int) c <= 256) {
-                int next_state = mini_dfa.transitionTable[current_state][c];
+                int next_state = next_transition[(int) c];
                 if (next_state != -1) {
                     current_state = next_state;
                 } else {
@@ -119,6 +110,14 @@ public class RegEx {
 
     // FROM REGEX TO SYNTAX TREE
     private static RegExTree parse() throws Exception {
+        // BEGIN DEBUG: set conditional to true for debug example
+        if (false)
+            throw new Exception();
+        RegExTree example = exampleAhoUllman();
+        if (false)
+            return example;
+        // END DEBUG
+
         ArrayList<RegExTree> result = new ArrayList<RegExTree>();
         for (int i = 0; i < regEx.length(); i++)
             result.add(new RegExTree(charToRoot(regEx.charAt(i)), new ArrayList<RegExTree>()));
@@ -131,8 +130,6 @@ public class RegEx {
             return DOT;
         if (c == '*')
             return STAR;
-        if (c == '+')
-            return PLUS;
         if (c == '|')
             return ALTERNATION;
         if (c == '(')
@@ -145,8 +142,6 @@ public class RegEx {
     private static RegExTree parse(ArrayList<RegExTree> result) throws Exception {
         while (containParenthese(result))
             result = processParenthese(result);
-        while (containPlus(result))
-            result = processPlus(result);
         while (containStar(result))
             result = processStar(result);
         while (containConcat(result))
@@ -192,32 +187,6 @@ public class RegEx {
         }
         if (!found)
             throw new Exception();
-        return result;
-    }
-
-    private static boolean containPlus(ArrayList<RegExTree> trees) {
-        for (RegExTree t : trees)
-            if (t.root == PLUS && t.subTrees.isEmpty())
-                return true;
-        return false;
-    }
-
-    private static ArrayList<RegExTree> processPlus(ArrayList<RegExTree> trees) throws Exception {
-        ArrayList<RegExTree> result = new ArrayList<RegExTree>();
-        boolean found = false;
-        for (RegExTree t : trees) {
-            if (!found && t.root == PLUS && t.subTrees.isEmpty()) {
-                if (result.isEmpty())
-                    throw new Exception();
-                found = true;
-                RegExTree last = result.get(result.size() - 1);
-                ArrayList<RegExTree> subTrees = new ArrayList<RegExTree>();
-                subTrees.add(last);
-                result.add(new RegExTree(STAR, subTrees));
-            } else {
-                result.add(t);
-            }
-        }
         return result;
     }
 
@@ -339,6 +308,25 @@ public class RegEx {
         for (RegExTree t : tree.subTrees)
             subTrees.add(removeProtection(t));
         return new RegExTree(tree.root, subTrees);
+    }
+
+    // EXAMPLE
+    // --> RegEx from Aho-Ullman book Chap.10 Example 10.25
+    private static RegExTree exampleAhoUllman() {
+        RegExTree a = new RegExTree((int) 'a', new ArrayList<RegExTree>());
+        RegExTree b = new RegExTree((int) 'b', new ArrayList<RegExTree>());
+        RegExTree c = new RegExTree((int) 'c', new ArrayList<RegExTree>());
+        ArrayList<RegExTree> subTrees = new ArrayList<RegExTree>();
+        subTrees.add(c);
+        RegExTree cStar = new RegExTree(STAR, subTrees);
+        subTrees = new ArrayList<RegExTree>();
+        subTrees.add(b);
+        subTrees.add(cStar);
+        RegExTree dotBCStar = new RegExTree(CONCAT, subTrees);
+        subTrees = new ArrayList<RegExTree>();
+        subTrees.add(a);
+        subTrees.add(dotBCStar);
+        return new RegExTree(ALTERNATION, subTrees);
     }
 
     private static NDFAutomaton regexToAutomaton(RegExTree ret) {
@@ -484,131 +472,63 @@ public class RegEx {
         return null;
     }
 
-    private static DFAutomaton convertToDFA(NDFAutomaton nfa) {
+    private static NDFAutomaton convertToDFA(NDFAutomaton aut) {
         // COMPUTE TRANSITIVE CLOSURE OF EPSILON ARCS ONLY
-        ArrayList<Integer>[] transitive_closures = new ArrayList[nfa.epsilonTransitionTable.length];
-        for (int i = 0; i < nfa.epsilonTransitionTable.length; i++) {
+        ArrayList<Integer>[] transitive_closures = new ArrayList[aut.epsilonTransitionTable.length];
+        for (int i = 0; i < aut.epsilonTransitionTable.length; i++) {
             // DFS for reachable states
-            ArrayList<Integer> transitive_closure = getTransitiveClosure(i, nfa.epsilonTransitionTable,
+            ArrayList<Integer> transitive_closure = getTransitiveClosure(i, aut.epsilonTransitionTable,
                     new ArrayList<Integer>());
             transitive_closures[i] = transitive_closure;
-            if (transitive_closure.contains(nfa.transitionTable.length - 1))
-                nfa.finalStates.add(i);
+            if (transitive_closure.contains(aut.transitionTable.length - 1))
+                aut.finalStates.add(i);
         }
         // Create substitutions for epsilon arcs
-        ArrayList<Integer>[][] transitionTable_without_eps = new ArrayList[nfa.transitionTable.length][256];
-        for (int i = 0; i < transitionTable_without_eps.length; i++) {
-            for (int col = 0; col < 256; col++) {
-                transitionTable_without_eps[i][col] = new ArrayList<Integer>();
-                if (nfa.transitionTable[i][col] != -1)
-                    transitionTable_without_eps[i][col].add(nfa.transitionTable[i][col]);
-            }
-        }
-        for (int i = 0; i < nfa.epsilonTransitionTable.length; i++) {
+        for (int i = 0; i < aut.epsilonTransitionTable.length; i++) {
             if (transitive_closures[i].isEmpty())
                 continue;
             for (int state : transitive_closures[i])
                 for (int col = 0; col < 256; col++) {
-                    int new_state = nfa.transitionTable[state][col];
-                    if (new_state != -1) {
-                        transitionTable_without_eps[i][col].add(new_state);
-                    }
+                    int new_state = aut.transitionTable[state][col];
+                    if (new_state != -1)
+                        aut.transitionTable[i][col] = new_state;
                 }
-            nfa.epsilonTransitionTable[i].clear();
+            aut.epsilonTransitionTable[i].clear();
         }
-        /*
-        for (int i = 1; i < nfa.epsilonTransitionTable.length; i++) {
+        for (int i = 1; i < aut.epsilonTransitionTable.length; i++) {
             if (transitive_closures[i].isEmpty())
                 for (int col = 0; col < 256; col++)
-                    transitionTable_without_eps[i][col].clear();
-        }*/
-        System.out.println("Remove epsilon");
-        for (int i = 0; i < transitionTable_without_eps.length; i++) {
-            for (int col = 0; col < 256; col++) {
-                if (!transitionTable_without_eps[i][col].isEmpty())
-                    System.out.println("  " + i + " -- " + (char) col + " --> " + transitionTable_without_eps[i][col] + "\n");
-            }
+                    aut.transitionTable[i][col] = -1;
         }
-        // Convert to DFA
-        int[][] dfa_transitionTable = new int[transitionTable_without_eps.length][256];
-        for (int i = 0; i < dfa_transitionTable.length; i++) {
-            for (int col = 0; col < 256; col++)
-                dfa_transitionTable[i][col] = -1;
-        }
-        HashMap<ArrayList<Integer>, Integer> state_mapping = new HashMap<ArrayList<Integer>, Integer>();
-        Queue<ArrayList<Integer>> new_states = new LinkedList<ArrayList<Integer>>();
-        int new_state = 1;
-        ArrayList<Integer> initial = new ArrayList<Integer>();
-        initial.add(0);
-        state_mapping.put(initial, 0);
-        new_states.add(initial);
-        while(!new_states.isEmpty()) {
-            ArrayList<Integer> current_states = new_states.remove();
-            for (int col = 0; col < 256; col++) {
-                Set<Integer> new_hash = new HashSet<Integer>();
-                for (int state : current_states) {              
-                    new_hash.addAll(transitionTable_without_eps[state][col]);
-                }
-                if (!new_hash.isEmpty()) {
-                    ArrayList<Integer> state_hash = new ArrayList<Integer>(new_hash); 
-                    Collections.sort(state_hash);
-                    dfa_transitionTable[state_mapping.get(current_states)][col] = new_state;
-                    if (!state_mapping.containsKey(state_hash)) {
-                        state_mapping.put(state_hash, new_state);
-                        new_state += 1;
-                        new_states.add(state_hash);
-                    }
-                }
-            }
-        }
-        Set<Integer> new_final_states = new HashSet<Integer>();
-        for (ArrayList<Integer>state_hash : state_mapping.keySet()) {
-            for (int state : nfa.finalStates) {
-                if (state_hash.contains(state)) {
-                    new_final_states.add(state_mapping.get(state_hash));
-                    break;
-                }
-            }
-        } 
-
-        return new DFAutomaton(dfa_transitionTable, new ArrayList<Integer>(new_final_states));
-    }
-
-    private static DFAutomaton minifyDFA(DFAutomaton dfa) {
-                /*
         // Remove reduntant states
-        ArrayList<Integer>[] transitions_as_arraylist = new ArrayList[dfa.transitionTable.length];
-        for (int i = 0; i < dfa.transitionTable.length; i++) {
+        ArrayList<Integer>[] transitions_as_arraylist = new ArrayList[aut.epsilonTransitionTable.length];
+        for (int i = 0; i < aut.transitionTable.length; i++) {
             transitions_as_arraylist[i] = new ArrayList<Integer>();
             for (int col = 0; col < 256; col++) {
-                //transitions_as_arraylist[i].addAll(dfa.transitionTable[i][col]);
+                if (aut.transitionTable[i][col] != -1)
+                    transitions_as_arraylist[i].add(aut.transitionTable[i][col]);
             }
         }
         ArrayList<Integer> reachable_from_inital = getTransitiveClosure(0, transitions_as_arraylist,
                 new ArrayList<Integer>());
-        for (int i = 1; i < dfa.transitionTable.length; i++) {
+        for (int i = 1; i < aut.transitionTable.length; i++) {
             if (!reachable_from_inital.contains(i)) {
                 for (int col = 0; col < 256; col++)
-                    //dfa.transitionTable[i][col].clear();
+                    aut.transitionTable[i][col] = -1;
             }
         }
         ArrayList<Integer> new_final_states = new ArrayList<Integer>();
-        for (int state : dfa.finalStates) {
+        for (int state : aut.finalStates) {
             if (reachable_from_inital.contains(state))
                 new_final_states.add(state);
         }
-        dfa.finalStates = new_final_states;
-        System.out.println(dfa.toString());
+        aut.finalStates = new_final_states;
         // Convert to DFA
-        
-        for (int i = 1; i < nfa.transitionTable.length; i++) {
+        return aut;
+    }
 
-            
-        }
-
-
-        */
-        return dfa;
+    private static NDFAutomaton minifyDFA(NDFAutomaton aut) {
+        return aut;
     }
 
     private static ArrayList<Integer> getTransitiveClosure(int state, ArrayList<Integer>[] transitionTable,
@@ -651,8 +571,6 @@ class RegExTree {
             return ".";
         if (root == RegEx.STAR)
             return "*";
-        if (root == RegEx.PLUS)
-            return "+";
         if (root == RegEx.ALTERNATION)
             return "|";
         if (root == RegEx.DOT)
@@ -681,27 +599,6 @@ class NDFAutomaton {
         for (int i = 0; i < epsilonTransitionTable.length; i++)
             for (int state : epsilonTransitionTable[i])
                 result += "  " + i + " -- epsilon --> " + state + "\n";
-        for (int i = 0; i < transitionTable.length; i++)
-            for (int col = 0; col < 256; col++)
-                if (transitionTable[i][col] != -1)
-                    result += "  " + i + " -- " + (char) col + " --> " + transitionTable[i][col] + "\n";
-        return result;
-    }
-}
-
-class DFAutomaton {
-    // IMPLICIT REPRESENTATION HERE: INIT STATE IS ALWAYS 0;
-    protected int[][] transitionTable; // ASCII transition
-    protected ArrayList<Integer> finalStates;
-
-    public DFAutomaton(int[][] transitionTable, ArrayList<Integer> finalStates) {
-        this.transitionTable = transitionTable;
-        this.finalStates = finalStates;
-    }
-
-    // PRINT THE AUTOMATON TRANSITION TABLE
-    public String toString() {
-        String result = "Initial state: 0\nFinal state: " + finalStates + "\nTransition list:\n";
         for (int i = 0; i < transitionTable.length; i++)
             for (int col = 0; col < 256; col++)
                 if (transitionTable[i][col] != -1)
