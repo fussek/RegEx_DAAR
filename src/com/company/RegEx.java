@@ -29,6 +29,7 @@ public class RegEx {
 
     // REGEX
     private static String regEx;
+    private static String fileName = "src/com/company/56667-0.txt";
 
     // CONSTRUCTOR
     public RegEx() {
@@ -36,8 +37,9 @@ public class RegEx {
 
     // MAIN
     public static void main(String arg[]) throws FileNotFoundException {
-        if (arg.length != 0) {
+        if (arg.length == 2) {
             regEx = arg[0];
+            fileName = arg[1];
         } else {
             Scanner scanner = new Scanner(System.in);
             System.out.print("  >> Please enter a regEx: ");
@@ -76,7 +78,7 @@ public class RegEx {
     }
 
     private static void searchForOccurrences(DFAutomaton mini_dfa) {
-        try (BufferedReader br = new BufferedReader(new FileReader("56667-0.txt"))) {
+        try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
             String line;
             while ((line = br.readLine()) != null) {
                 findRegExInLine(line, mini_dfa);
