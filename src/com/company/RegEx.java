@@ -47,34 +47,24 @@ public class RegEx {
             scanner.close();
         }
         long start2 = System.currentTimeMillis();
-        System.out.println("  >> Parsing regEx \"" + regEx + "\".");
-        System.out.println("  >> ...");
 
         if (regEx.length() < 1) {
             System.err.println("  >> ERROR: empty regEx.");
         } else {
-            System.out.print("  >> ASCII codes: [" + (int) regEx.charAt(0));
-            for (int i = 1; i < regEx.length(); i++)
-                System.out.print("," + (int) regEx.charAt(i));
-            System.out.println("].");
             RegExTree ret = null;
             try {
                 ret = parse();
-                System.out.println("  >> Tree result: " + ret.toString() + ".");
             } catch (Exception e) {
                 System.err.println("  >> ERROR: syntax error for regEx \"" + regEx + "\".");
             }
             NDFAutomaton ndfa = regexToAutomaton(ret);
             DFAutomaton dfa = convertToDFA(ndfa);
             DFAutomaton mini_dfa = minifyDFA(dfa);
-            System.out.println("  >>>>>>> RegEx search results: <<<<<<<< \n");
+            System.out.println("  >> RegEx search results:\n");
             searchForOccurrences(mini_dfa);
             long end2 = System.currentTimeMillis();
-            System.out.println("\n\n ++++++++ Elapsed Time in milli seconds: "+ (end2-start2) +"ms ++++++++");
+            System.out.println("\n\n ++++++++ Elapsed Time: "+ (end2-start2) +"ms ++++++++");
         }
-
-        System.out.println("\n  >>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<");
-        System.out.println("  >> Parsing completed.");
     }
 
     private static void searchForOccurrences(DFAutomaton mini_dfa) {
