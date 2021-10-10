@@ -516,18 +516,10 @@ public class RegEx {
                 }
             nfa.epsilonTransitionTable[i].clear();
         }
-        /*
         for (int i = 1; i < nfa.epsilonTransitionTable.length; i++) {
             if (transitive_closures[i].isEmpty())
                 for (int col = 0; col < 256; col++)
                     transitionTable_without_eps[i][col].clear();
-        }*/
-        System.out.println("Remove epsilon");
-        for (int i = 0; i < transitionTable_without_eps.length; i++) {
-            for (int col = 0; col < 256; col++) {
-                if (!transitionTable_without_eps[i][col].isEmpty())
-                    System.out.println("  " + i + " -- " + (char) col + " --> " + transitionTable_without_eps[i][col] + "\n");
-            }
         }
         // Convert to DFA
         int[][] dfa_transitionTable = new int[transitionTable_without_eps.length][256];
@@ -552,11 +544,13 @@ public class RegEx {
                 if (!new_hash.isEmpty()) {
                     ArrayList<Integer> state_hash = new ArrayList<Integer>(new_hash); 
                     Collections.sort(state_hash);
-                    dfa_transitionTable[state_mapping.get(current_states)][col] = new_state;
                     if (!state_mapping.containsKey(state_hash)) {
+                        dfa_transitionTable[state_mapping.get(current_states)][col] = new_state;
                         state_mapping.put(state_hash, new_state);
                         new_state += 1;
                         new_states.add(state_hash);
+                    } else {
+                        dfa_transitionTable[state_mapping.get(current_states)][col] = state_mapping.get(state_hash);
                     }
                 }
             }
