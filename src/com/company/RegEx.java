@@ -15,8 +15,6 @@ import java.util.Collections;
 
 import java.lang.Exception;
 
-import jdk.nashorn.internal.codegen.MapCreator;
-
 public class RegEx {
     // MACROS
     static final int CONCAT = 0xC04CA7;
